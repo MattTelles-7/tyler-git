@@ -28,6 +28,8 @@ const scores = {
   draw: 0,
 };
 
+const computerMistakeChance = 0.45;
+
 let boardState = Array(9).fill("");
 let currentPlayer = "X";
 let gameMode = "human";
@@ -35,6 +37,10 @@ let gameActive = true;
 let waitingForComputer = false;
 let winningLine = [];
 let computerTurnTimer = null;
+
+function pickRandomMove(moves) {
+  return moves[Math.floor(Math.random() * moves.length)];
+}
 
 function resetBoard() {
   if (computerTurnTimer) {
@@ -169,9 +175,8 @@ function minimax(state, isMaximizing) {
   return bestScore;
 }
 
-function getBestComputerMove() {
-  let bestScore = -Infinity;
-  let bestMove = -1;
+function getComputerMove() {
+  const moveRatings = [];
 
   boardState.forEach((value, index) => {
     if (value) {
@@ -181,13 +186,18 @@ function getBestComputerMove() {
     const score = minimax(boardState, false);
     boardState[index] = "";
 
-    if (score > bestScore) {
-      bestScore = score;
-      bestMove = index;
-    }
+    moveRatings.push({ index, score });
   });
 
-  return bestMove;
+  const bestScore = Math.max(...moveRatings.map((move) => move.score));
+  const bestMoves = moveRatings.filter((move) => move.score === bestScore);
+  const mistakeMoves = moveRatings.filter((move) => move.score < bestScore);
+
+  if (mistakeMoves.length > 0 && Math.random() < computerMistakeChance) {
+    return pickRandomMove(mistakeMoves).index;
+  }
+
+  return pickRandomMove(bestMoves).index;
 }
 
 function triggerComputerTurn() {
@@ -203,7 +213,7 @@ function triggerComputerTurn() {
       return;
     }
     waitingForComputer = false;
-    const move = getBestComputerMove();
+    const move = getComputerMove();
     applyMove(move, "O");
     computerTurnTimer = null;
   }, 320);
